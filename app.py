@@ -10,13 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- FastAPIアプリの初期化 ---
-app = FastAPI(
-    title="POS API",
-    description="POS商品管理用API（FastAPI + Azure）",
-    version="1.0",
-    docs_url="/docs",     # ✅ Swagger UI を有効化（/docs）
-    redoc_url=None        # ✅ Redoc は無効に（任意）
-)
+app = FastAPI()
 
 # --- CORS設定（Next.jsからのアクセスを許可） ---
 app.add_middleware(
@@ -27,13 +21,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MySQL接続設定（環境変数から取得） ---
+# --- MySQL接続設定（SSL証明書指定付き） ---
 db_config = {
     'host': os.getenv("DB_HOST"),
     'port': int(os.getenv("DB_PORT", 3306)),
     'user': os.getenv("DB_USER"),
     'password': os.getenv("DB_PASSWORD"),
-    'database': os.getenv("DB_NAME")
+    'database': os.getenv("DB_NAME"),
+    'ssl_ca': os.path.join("certs", "DigiCertGlobalRootCA.crt.pem")  # ← SSL証明書を指定
 }
 
 # --- Pydanticモデル定義 ---
@@ -80,14 +75,12 @@ def purchase(data: PurchaseData):
         total = sum(item.price for item in data.items)
         pos_no = data.pos_id[-3:]  # ✅ pos_noを末尾3文字に制限
 
-        # 取引（親テーブル）
         cursor.execute("""
             INSERT INTO transaction (emp_cd, store_cd, pos_no, total_amt)
             VALUES (%s, %s, %s, %s)
         """, ("EMP001", "001", pos_no, total))
         trd_id = cursor.lastrowid
 
-        # 取引明細（子テーブル）
         for item in data.items:
             cursor.execute("""
                 INSERT INTO transaction_detail (trd_id, prd_code, prd_name, prd_price)
