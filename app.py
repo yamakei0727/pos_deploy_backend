@@ -10,7 +10,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- FastAPIアプリの初期化 ---
-app = FastAPI()
+app = FastAPI(
+    title="POS API",
+    description="POS商品管理用API（FastAPI + Azure）",
+    version="1.0",
+    docs_url="/docs",     # ✅ Swagger UI を有効化（/docs）
+    redoc_url=None        # ✅ Redoc は無効に（任意）
+)
 
 # --- CORS設定（Next.jsからのアクセスを許可） ---
 app.add_middleware(
